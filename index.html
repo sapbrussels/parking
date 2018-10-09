@@ -1,0 +1,210 @@
+<html>
+  <head>
+    <title>Parking</title>
+    <script src="https://code.jquery.com/jquery-3.3.1.min.js" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.4.13/d3.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/epoch/0.8.4/js/epoch.min.js"></script>
+    <style type="text/css">
+      body {
+        margin: 0;
+        padding: 0;
+      }
+      .sap-logo {
+        background: url('sap.png');
+        background-size: 100% 100%;
+        width: 150px;
+        height: 75px;
+        position: absolute;
+        top: 20;
+        left: 20;
+        z-index: 2;
+      }
+      .parking {
+        background: url('parking.jpg');
+        background-size: 100% 100%;
+        display: block;
+        width: 100vw;
+        height: 100vh;
+        position: relative;
+      }
+      .parking::after {
+        content: "";
+        background: #000;
+        opacity: 0.6;
+        display: block;
+        width: 100vw;
+        height: 100vh;
+      }
+
+      .car {
+        background: url('car.png');
+        background-size: 100% 100%;
+        display: block;
+        width: 400px;
+        height: 250px;
+        z-index: 2;
+      }
+
+      #car1 {
+        position: absolute;
+        left: 12vw;
+        top: 45vh;
+      }
+
+      #car1-led {
+        position: absolute;
+        left: 25vw;
+        top: 33vh;
+        z-index: 3;
+      }
+
+      #car2 {
+        position: absolute;
+        right: 13vw;
+        top: 40vh;
+      }
+
+      #car2-led {
+        position: absolute;
+        right: 32vw;
+        top: 30vh;
+        z-index: 3;
+      }
+
+      .led-red {
+        margin: 0 auto;
+        width: 24px;
+        height: 24px;
+        background-color: #F00;
+        border-radius: 50%;
+        box-shadow: rgba(0, 0, 0, 0.2) 0 -1px 7px 1px, inset #441313 0 -1px 9px, rgba(255, 0, 0, 0.5) 0 2px 12px;
+        -webkit-animation: blinkRed 0.5s infinite;
+        -moz-animation: blinkRed 0.5s infinite;
+        -ms-animation: blinkRed 0.5s infinite;
+        -o-animation: blinkRed 0.5s infinite;
+        animation: blinkRed 0.5s infinite;
+      }
+
+      .led-green {
+        margin: 0 auto;
+        width: 24px;
+        height: 24px;
+        background-color: #ABFF00;
+        border-radius: 50%;
+        box-shadow: rgba(0, 0, 0, 0.2) 0 -1px 7px 1px, inset #304701 0 -1px 9px, #89FF00 0 2px 12px;
+      }
+
+      @-webkit-keyframes blinkRed {
+          from { background-color: #F00; }
+          50% { background-color: #A00; box-shadow: rgba(0, 0, 0, 0.2) 0 -1px 7px 1px, inset #441313 0 -1px 9px, rgba(255, 0, 0, 0.5) 0 2px 0;}
+          to { background-color: #F00; }
+      }
+      @-moz-keyframes blinkRed {
+          from { background-color: #F00; }
+          50% { background-color: #A00; box-shadow: rgba(0, 0, 0, 0.2) 0 -1px 7px 1px, inset #441313 0 -1px 9px, rgba(255, 0, 0, 0.5) 0 2px 0;}
+          to { background-color: #F00; }
+      }
+      @-ms-keyframes blinkRed {
+          from { background-color: #F00; }
+          50% { background-color: #A00; box-shadow: rgba(0, 0, 0, 0.2) 0 -1px 7px 1px, inset #441313 0 -1px 9px, rgba(255, 0, 0, 0.5) 0 2px 0;}
+          to { background-color: #F00; }
+      }
+      @-o-keyframes blinkRed {
+          from { background-color: #F00; }
+          50% { background-color: #A00; box-shadow: rgba(0, 0, 0, 0.2) 0 -1px 7px 1px, inset #441313 0 -1px 9px, rgba(255, 0, 0, 0.5) 0 2px 0;}
+          to { background-color: #F00; }
+      }
+      @keyframes blinkRed {
+          from { background-color: #F00; }
+          50% { background-color: #A00; box-shadow: rgba(0, 0, 0, 0.2) 0 -1px 7px 1px, inset #441313 0 -1px 9px, rgba(255, 0, 0, 0.5) 0 2px 0;}
+          to { background-color: #F00; }
+      }
+      .parking-chart {
+        position: absolute;
+        bottom: -25px;
+        left: 0;
+      }
+
+      .free .area {
+        fill: green;
+      }
+
+      .occupied .area {
+        fill: red;
+      }
+
+    </style>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/epoch/0.8.4/css/epoch.min.css" />
+  </head>
+  <body class="epoch-theme-default">
+    <div class="sap-logo"></div>
+    <div class="parking">
+      <div id="car1-led" class="led-green"></div>
+      <div id="car1" style="display:none;" class="car"></div>
+      <div id="car2-led" class="led-green"></div>
+      <div id="car2" style="display:none;" class="car"></div>
+      <div class="epoch-theme-default">
+        <div id="myChart" class="parking-chart styles1 epoch category2" style="width: 100%; height: 100px"></div>
+      </div>
+    </div>
+    <script type="text/javascript">
+      $(document).ready(function(){
+        var timeStamp = Math.floor(Date.now() / 1000);
+        const parkingData = [
+          {
+            label: "occupied",
+            values: [],
+            axes: ['left', 'right', 'bottom']
+          },
+        ];
+        var parkingChart = $('#myChart').epoch({ type: 'time.bar', data: parkingData });
+        parkingChart.redraw();
+
+        function updateParkingLots() {
+          const url = 'https://96e9f7bd-c38b-458d-8b98-630be0232fb8.eu10.cp.iot.sap/iot/core/api/v1/devices/23/measures?top=1&orderby=timestamp desc';
+          $.ajax({
+             url: url,
+             type: "GET",
+             beforeSend: function(xhr){xhr.setRequestHeader('Authorization', 'Basic YXR0ZW5kZWUuYWRtaW46V2VsY29tZTE=');},
+             success: function(payload) {
+               const distance1 = payload[0].measure['Distance1'];
+               const occupied1 = payload[1].measure['Occupied1'];
+               const distance2 = payload[0].measure['Distance2'];
+               const occupied2 = payload[3].measure['Occupied2'];
+
+               var numberOfOccupied = 0;
+               if(occupied1 == '1' && occupied2 == '1') {
+                 numberOfOccupied = 2;
+               }
+               else if(occupied1 == '1' || occupied2 == '1') {
+                 numberOfOccupied = 1;
+               }
+
+               var timeStamp = Math.floor(Date.now() / 1000);
+               parkingChart.push([{time: timeStamp, y: numberOfOccupied}]);
+
+               if(occupied1 == "1") {
+                 $("#car1").show();
+                 $("#car1-led").removeClass("led-green").addClass("led-red");
+               } else {
+                 $("#car1").hide();
+                 $("#car1-led").removeClass("led-red").addClass("led-green");
+               }
+               if(occupied2 == "1") {
+                 $("#car2").show();
+                 $("#car2-led").removeClass("led-green").addClass("led-red");
+               } else {
+                 $("#car2").hide();
+                 $("#car2-led").removeClass("led-red").addClass("led-green");
+               }
+             }
+          });
+        }
+
+        setInterval(function() {
+          updateParkingLots();
+        }, 1000);
+      })
+    </script>
+  </body>
+</html>
